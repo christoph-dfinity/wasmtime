@@ -357,18 +357,18 @@ wit-bindgen = { version = "0.58.0", default-features = false }
 wit-bindgen-rust-macro = { version = "0.58.0", default-features = false }
 
 # wasm-tools family:
-wasmparser = { version = "0.252.0", default-features = false, features = ['simd'] }
-wat = "1.252.0"
-wast = "252.0.0"
-wasmprinter = "0.252.0"
-wasm-encoder = "0.252.0"
-wasm-smith = "0.252.0"
-wasm-mutate = "0.252.0"
-wit-parser = "0.252.0"
-wit-component = "0.252.0"
-wasm-wave = "0.252.0"
-wasm-compose = { version = "0.252.0", default-features = false }
-json-from-wast = "0.252.0"
+wasmparser = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa", default-features = false, features = ['simd'] }
+wat = { version = "1.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
+wast = { version = "252.0.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
+wasmprinter = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
+wasm-encoder = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
+wasm-smith = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
+wasm-mutate = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
+wit-parser = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
+wit-component = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
+wasm-wave = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
+wasm-compose = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa", default-features = false }
+json-from-wast = { version = "0.252.0", git = "https://github.com/bytecodealliance/wasm-tools", rev = "d12be8cfe99238980c1c708e292a005d00a481aa" }
 
 wstd = "0.6.5"
 wasip2 = "1.0"

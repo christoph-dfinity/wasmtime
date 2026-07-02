@@ -446,6 +446,9 @@ wasmtime_option_group! {
         pub component_model_gc: Option<bool>,
         /// Map support in the component model.
         pub component_model_map: Option<bool>,
+        /// Component model support for `memory`: this corresponds
+        /// to the :elefant: emoji in the component model specification.
+        pub component_model_memory64: Option<bool>,
         /// Configure support for the function-references proposal.
         pub function_references: Option<bool>,
         /// Configure support for the stack-switching proposal.
@@ -1440,6 +1443,7 @@ impl CommonOptions {
                 ),
                 component_model_implements: Some(features.contains(WasmFeatures::CM_IMPLEMENTS)),
                 component_model_map: Some(features.contains(WasmFeatures::CM_MAP)),
+                component_model_memory64: Some(features.contains(WasmFeatures::CM64)),
                 component_model_more_async_builtins: Some(
                     features.contains(WasmFeatures::CM_MORE_ASYNC_BUILTINS),
                 ),

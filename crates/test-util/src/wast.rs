@@ -193,6 +193,7 @@ fn component_test_config(test: &Path) -> TestConfig {
     ret.reference_types = Some(true);
     ret.multi_memory = Some(true);
     ret.component_model_implements = Some(true);
+    ret.component_model_memory64 = Some(true);
 
     if let Some(parent) = test.parent() {
         if parent.ends_with("async")
@@ -286,6 +287,7 @@ macro_rules! foreach_config_option {
             component_model_error_context
             component_model_gc
             component_model_map
+            component_model_memory64
             component_model_fixed_length_lists
             component_model_implements
             simd
@@ -471,14 +473,14 @@ impl WastTest {
             return true;
         }
 
-        let unsupported = [
-            // Wasmtime doesn't expose the component-model `cm64` feature toggle
-            // yet, so this parser-only test can't be enabled here.
-            "test/wasm-tools/memory64.wast",
-        ];
-        if unsupported.iter().any(|part| self.path.ends_with(part)) {
-            return true;
-        }
+        // let unsupported = [
+        //     // Wasmtime doesn't expose the component-model `cm64` feature toggle
+        //     // yet, so this parser-only test can't be enabled here.
+        //     "test/wasm-tools/memory64.wast",
+        // ];
+        // if unsupported.iter().any(|part| self.path.ends_with(part)) {
+        //     return true;
+        // }
 
         // Some tests are known to fail with the pooling allocator
         if config.pooling {
