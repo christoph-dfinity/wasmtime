@@ -592,12 +592,16 @@ impl Func {
         args: &[Val],
         dst: &mut [MaybeUninit<ValRaw>],
     ) -> Result<()> {
-        let size = usize::try_from(params_ty.abi.size32).unwrap();
-        let ptr = cx.realloc(0, 0, params_ty.abi.align32, size)?;
+        let memory64 = cx.memory64();
+        let size = usize::try_from(params_ty.abi.size(memory64)).unwrap();
+        let ptr = cx.realloc(0, 0, params_ty.abi.align(memory64), size)?;
         let mut offset = ptr;
         for (ty, arg) in params_ty.types.iter().zip(args) {
-            let abi = cx.types.canonical_abi(ty);
-            arg.store(cx, *ty, abi.next_field32_size(&mut offset))?;
+            let field_offset = cx
+                .types
+                .canonical_abi(ty)
+                .next_field_size(memory64, &mut offset);
+            arg.store(cx, *ty, field_offset)?;
         }
 
         dst[0].write(ValRaw::i64(ptr as i64));
@@ -634,23 +638,28 @@ impl Func {
         results_ty: &'a TypeTuple,
         src: &mut core::slice::Iter<'_, ValRaw>,
     ) -> Result<impl Iterator<Item = Result<Val>> + use<'a, 'b>> {
-        // FIXME(#4311): needs to read an i64 for memory64
-        let ptr = usize::try_from(src.next().unwrap().get_u32())?;
-        if ptr % usize::try_from(results_ty.abi.align32)? != 0 {
+        let memory64 = cx.memory64();
+        let raw = src.next().unwrap();
+        let ptr = if memory64 {
+            usize::try_from(raw.get_u64())?
+        } else {
+            usize::try_from(raw.get_u32())?
+        };
+        if ptr % usize::try_from(results_ty.abi.align(memory64))? != 0 {
             bail!("return pointer not aligned");
         }
 
         let bytes = cx
             .memory()
             .get(ptr..)
-            .and_then(|b| b.get(..usize::try_from(results_ty.abi.size32).unwrap()))
+            .and_then(|b| b.get(..usize::try_from(results_ty.abi.size(memory64)).unwrap()))
             .ok_or_else(|| crate::format_err!("pointer out of bounds of memory"))?;
 
         let mut offset = 0;
         Ok(results_ty.types.iter().map(move |ty| {
             let abi = cx.types.canonical_abi(ty);
-            let offset = abi.next_field32_size(&mut offset);
-            Val::load(cx, *ty, &bytes[offset..][..abi.size32 as usize])
+            let offset = abi.next_field_size(memory64, &mut offset);
+            Val::load(cx, *ty, &bytes[offset..][..abi.size(memory64) as usize])
         }))
     }
 

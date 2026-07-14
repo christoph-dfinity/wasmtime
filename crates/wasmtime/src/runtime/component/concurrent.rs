@@ -3354,7 +3354,7 @@ impl Instance {
             || string_encoding != &lift.string_encoding
             || match data_model {
                 CanonicalOptionsDataModel::LinearMemory(opts) => match opts.memory {
-                    Some(memory) => {
+                    Some((memory, _is64)) => {
                         let expected = lift.memory.map(|v| v.as_ptr()).unwrap_or(ptr::null_mut());
                         let actual = self.id().get(store).runtime_memory(memory);
                         expected != actual.as_ptr()
@@ -3945,6 +3945,9 @@ impl Instance {
             &CanonicalAbiInfo::POINTER_PAIR,
             memory,
             &ValRaw::u32(params.payload),
+            // NB: memory64 is not yet wired through the async ABI; preserve the
+            // existing 32-bit bounds check here.
+            false,
         )?;
         memory[ptr + 0..][..4].copy_from_slice(&handle.to_le_bytes());
         memory[ptr + 4..][..4].copy_from_slice(&result.to_le_bytes());

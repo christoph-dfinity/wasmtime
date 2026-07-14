@@ -27,10 +27,10 @@
 //! translation where the dataflow performed there allows identification of
 //! fused adapters, what arguments make their way to core wasm modules, etc.
 
-use crate::component::*;
 use crate::error::Result;
 use crate::prelude::*;
 use crate::{EntityIndex, EntityRef, ModuleInternedTypeIndex, PrimaryMap, WasmValType};
+use crate::{IndexType, component::*};
 use cranelift_entity::packed_option::PackedOption;
 use indexmap::IndexMap;
 use info::LinearMemoryOptions;
@@ -527,7 +527,7 @@ pub struct StreamInfo {
 pub enum CanonicalOptionsDataModel {
     Gc {},
     LinearMemory {
-        memory: Option<MemoryId>,
+        memory: Option<(MemoryId, IndexType)>,
         realloc: Option<ReallocId>,
     },
 }
@@ -833,7 +833,7 @@ impl LinearizeDfg<'_> {
             CanonicalOptionsDataModel::Gc {} => info::CanonicalOptionsDataModel::Gc {},
             CanonicalOptionsDataModel::LinearMemory { memory, realloc } => {
                 info::CanonicalOptionsDataModel::LinearMemory(LinearMemoryOptions {
-                    memory: memory.map(|mem| self.runtime_memory(mem)),
+                    memory: memory.map(|(mem, ty)| (self.runtime_memory(mem), ty)),
                     realloc: realloc.map(|mem| self.runtime_realloc(mem)),
                 })
             }

@@ -37,6 +37,20 @@ pub fn map_engine() -> Engine {
     Engine::new(&map_config()).unwrap()
 }
 
+/// Configuration with the component-model memory64 (🐘) feature enabled, along
+/// with the core-wasm memory64 feature required to instantiate the inner core
+/// modules that back a 64-bit component.
+pub fn config64() -> Config {
+    let mut config = config();
+    config.wasm_memory64(true);
+    config.wasm_component_model_memory64(true);
+    config
+}
+
+pub fn engine64() -> Engine {
+    Engine::new(&config64()).unwrap()
+}
+
 pub fn async_engine() -> Engine {
     Engine::default()
 }

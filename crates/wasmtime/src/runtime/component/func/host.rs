@@ -423,10 +423,12 @@ where
             // return pointer, located after the parameters, is initialized
             // by wasm and safe to read.
             let ptr = unsafe { rest[0].assume_init_ref() };
+            let memory64 = lower.memory64();
             Destination::Memory(validate_inbounds_dynamic(
                 &result_tys.abi,
                 lower.as_slice_mut(),
                 ptr,
+                memory64,
             )?)
         };
         lower.validate_scope_exit()?;
@@ -468,7 +470,8 @@ where
             // should be safe to use.
             let ptr = unsafe { rest[0].assume_init_ref() };
             let result_tys = &lower.types[fty.results];
-            validate_inbounds_dynamic(&result_tys.abi, lower.as_slice_mut(), ptr)?
+            let memory64 = lower.memory64();
+            validate_inbounds_dynamic(&result_tys.abi, lower.as_slice_mut(), ptr, memory64)?
         } else {
             // If there's no return pointer then `R` should have an
             // empty flat representation. In this situation pretend the return
@@ -543,10 +546,12 @@ where
                 // guaranteed that the return pointer is initialized by
                 // compiled wasm.
                 let ptr = unsafe { storage[0].assume_init_ref() };
+                let memory64 = lift.memory64();
                 Source::Memory(validate_inbounds_dynamic(
                     &param_tys.abi,
                     lift.memory(),
                     ptr,
+                    memory64,
                 )?)
             }
         };
@@ -747,10 +752,12 @@ where
                 assert!(iter.next().is_none());
             }
             Source::Memory(mut offset) => {
+                let memory64 = cx.memory64();
                 for ty in param_tys.types.iter() {
                     let abi = cx.types.canonical_abi(ty);
-                    let size = usize::try_from(abi.size32).unwrap();
-                    let memory = &cx.memory()[abi.next_field32_size(&mut offset)..][..size];
+                    let size = usize::try_from(abi.size(memory64)).unwrap();
+                    let field_offset = abi.next_field_size(memory64, &mut offset);
+                    let memory = &cx.memory()[field_offset..][..size];
                     params.push(Val::load(cx, *ty, memory)?);
                 }
             }
@@ -778,8 +785,12 @@ where
                 assert!(dst.next().is_none());
             }
             Destination::Memory(mut ptr) => {
+                let memory64 = cx.memory64();
                 for (val, ty) in result_vals.iter().zip(result_tys.types.iter()) {
-                    let offset = cx.types.canonical_abi(ty).next_field32_size(&mut ptr);
+                    let offset = cx
+                        .types
+                        .canonical_abi(ty)
+                        .next_field_size(memory64, &mut ptr);
                     val.store(cx, *ty, offset)?;
                 }
             }
@@ -792,13 +803,17 @@ pub(crate) fn validate_inbounds_dynamic(
     abi: &CanonicalAbiInfo,
     memory: &[u8],
     ptr: &ValRaw,
+    memory64: bool,
 ) -> Result<usize> {
-    // FIXME(#4311): needs memory64 support
-    let ptr = usize::try_from(ptr.get_u32())?;
-    if ptr % usize::try_from(abi.align32)? != 0 {
+    let ptr = if memory64 {
+        usize::try_from(ptr.get_u64())?
+    } else {
+        usize::try_from(ptr.get_u32())?
+    };
+    if ptr % usize::try_from(abi.align(memory64))? != 0 {
         bail!("pointer not aligned");
     }
-    let end = match ptr.checked_add(usize::try_from(abi.size32).unwrap()) {
+    let end = match ptr.checked_add(usize::try_from(abi.size(memory64)).unwrap()) {
         Some(n) => n,
         None => bail!("pointer size overflow"),
     };

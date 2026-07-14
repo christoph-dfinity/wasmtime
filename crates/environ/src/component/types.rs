@@ -832,6 +832,37 @@ impl CanonicalAbiInfo {
         usize::try_from(cur - self.size64).unwrap()
     }
 
+    /// Returns the in-memory size of this type, selecting the 32-bit or 64-bit
+    /// layout based on `memory64`.
+    pub fn size(&self, memory64: bool) -> u32 {
+        if memory64 { self.size64 } else { self.size32 }
+    }
+
+    /// Returns the in-memory alignment of this type, selecting the 32-bit or
+    /// 64-bit layout based on `memory64`.
+    pub fn align(&self, memory64: bool) -> u32 {
+        if memory64 { self.align64 } else { self.align32 }
+    }
+
+    /// Like `next_field32`/`next_field64`, selecting based on `memory64`.
+    pub fn next_field(&self, memory64: bool, offset: &mut u32) -> u32 {
+        if memory64 {
+            self.next_field64(offset)
+        } else {
+            self.next_field32(offset)
+        }
+    }
+
+    /// Like `next_field32_size`/`next_field64_size`, selecting based on
+    /// `memory64`.
+    pub fn next_field_size(&self, memory64: bool, offset: &mut usize) -> usize {
+        if memory64 {
+            self.next_field64_size(offset)
+        } else {
+            self.next_field32_size(offset)
+        }
+    }
+
     /// Returns ABI information for a structure which contains `count` flags.
     pub const fn flags(count: usize) -> CanonicalAbiInfo {
         let (size, align, flat_count) = match FlagsSize::from_count(count) {

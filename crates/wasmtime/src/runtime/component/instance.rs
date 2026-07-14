@@ -468,7 +468,7 @@ impl Instance {
         let memory = match options.data_model {
             CanonicalOptionsDataModel::Gc { .. } => return None,
             CanonicalOptionsDataModel::LinearMemory(o) => match o.memory {
-                Some(m) => m,
+                Some((m, _)) => m,
                 None => return None,
             },
         };

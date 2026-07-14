@@ -120,6 +120,12 @@ impl<'a, T: 'static> LowerContext<'a, T> {
         &self.instance().component().env_component().options[self.options]
     }
 
+    /// Returns whether the linear memory being lowered into is 64-bit, meaning
+    /// pointers and lengths in the canonical ABI are `i64` rather than `i32`.
+    pub fn memory64(&self) -> bool {
+        self.options().memory64()
+    }
+
     /// Returns a view into memory as a mutable slice of bytes.
     ///
     /// # Panics
@@ -149,32 +155,48 @@ impl<'a, T: 'static> LowerContext<'a, T> {
         let (component, store) = self.instance.component_and_store_mut(self.store.0);
         let instance = self.instance.id().get(store);
         let options = &component.env_component().options[self.options];
-        let realloc_ty = component.realloc_func_ty();
+        let memory64 = options.memory64();
+        let realloc_ty = component.realloc_func_ty(memory64);
         let realloc = match options.data_model {
             CanonicalOptionsDataModel::Gc {} => unreachable!(),
             CanonicalOptionsDataModel::LinearMemory(m) => m.realloc.unwrap(),
         };
         let realloc = instance.runtime_realloc(realloc);
 
-        let params = (
-            u32::try_from(old)?,
-            u32::try_from(old_size)?,
-            old_align,
-            u32::try_from(new_size)?,
-        );
-
-        type ReallocFunc = crate::TypedFunc<(u32, u32, u32, u32), u32>;
-
         // Invoke the wasm malloc function using its raw and statically known
-        // signature.
-        let result = unsafe {
-            ReallocFunc::call_raw(&mut StoreContextMut(store), &realloc_ty, realloc, params)?
+        // signature. For 64-bit memories `realloc` takes and returns `i64`, so
+        // the pointer must not be truncated to 32 bits.
+        let result = if memory64 {
+            type ReallocFunc = crate::TypedFunc<(u64, u64, u64, u64), u64>;
+            let params = (
+                old as u64,
+                old_size as u64,
+                u64::from(old_align),
+                new_size as u64,
+            );
+            let result = unsafe {
+                ReallocFunc::call_raw(&mut StoreContextMut(store), &realloc_ty, realloc, params)?
+            };
+            if result % u64::from(old_align) != 0 {
+                bail!("realloc return: result not aligned");
+            }
+            usize::try_from(result)?
+        } else {
+            type ReallocFunc = crate::TypedFunc<(u32, u32, u32, u32), u32>;
+            let params = (
+                u32::try_from(old)?,
+                u32::try_from(old_size)?,
+                old_align,
+                u32::try_from(new_size)?,
+            );
+            let result = unsafe {
+                ReallocFunc::call_raw(&mut StoreContextMut(store), &realloc_ty, realloc, params)?
+            };
+            if result % old_align != 0 {
+                bail!("realloc return: result not aligned");
+            }
+            usize::try_from(result)?
         };
-
-        if result % old_align != 0 {
-            bail!("realloc return: result not aligned");
-        }
-        let result = usize::try_from(result)?;
 
         if self
             .as_slice_mut()
@@ -377,6 +399,12 @@ impl<'a> LiftContext<'a> {
     /// Returns the `OptionsIndex` being used during lifting.
     pub fn options_index(&self) -> OptionsIndex {
         self.options
+    }
+
+    /// Returns whether the linear memory being lifted from is 64-bit, meaning
+    /// pointers and lengths in the canonical ABI are `i64` rather than `i32`.
+    pub fn memory64(&self) -> bool {
+        self.options().memory64()
     }
 
     /// Returns the entire contents of linear memory for this set of lifting
