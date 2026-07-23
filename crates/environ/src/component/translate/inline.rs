@@ -1606,7 +1606,8 @@ impl<'a> Inliner<'a> {
             DataModel::Gc {} => dfg::CanonicalOptionsDataModel::Gc {},
             DataModel::LinearMemory { memory, realloc } => {
                 dfg::CanonicalOptionsDataModel::LinearMemory {
-                    memory: memory.map(|(export, _)| self.result.memories.push(export)),
+                    memory: memory
+                        .map(|(export, ty)| (self.result.memories.push(export), ty.idx_type)),
                     realloc: realloc.map(|def| self.result.reallocs.push(def)),
                 }
             }

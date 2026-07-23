@@ -1269,18 +1269,24 @@ fn lift_pointer_pair_from_flat(
     cx: &mut LiftContext<'_>,
     src: &[ValRaw; 2],
 ) -> Result<(usize, usize)> {
-    // FIXME(#4311): needs memory64 treatment
-    let _ = cx; // this will be needed for memory64 in the future
-    let ptr = src[0].get_u32();
-    let len = src[1].get_u32();
+    let (ptr, len) = if cx.memory64() {
+        (src[0].get_u64(), src[1].get_u64())
+    } else {
+        (u64::from(src[0].get_u32()), u64::from(src[1].get_u32()))
+    };
     Ok((usize::try_from(ptr)?, usize::try_from(len)?))
 }
 
 fn lift_pointer_pair_from_memory(cx: &mut LiftContext<'_>, bytes: &[u8]) -> Result<(usize, usize)> {
-    // FIXME(#4311): needs memory64 treatment
-    let _ = cx; // this will be needed for memory64 in the future
-    let ptr = u32::from_le_bytes(*bytes[..4].as_array().unwrap());
-    let len = u32::from_le_bytes(*bytes[4..].as_array().unwrap());
+    let (ptr, len) = if cx.memory64() {
+        let ptr = u64::from_le_bytes(*bytes[..8].as_array().unwrap());
+        let len = u64::from_le_bytes(*bytes[8..16].as_array().unwrap());
+        (ptr, len)
+    } else {
+        let ptr = u64::from(u32::from_le_bytes(*bytes[..4].as_array().unwrap()));
+        let len = u64::from(u32::from_le_bytes(*bytes[4..8].as_array().unwrap()));
+        (ptr, len)
+    };
     Ok((usize::try_from(ptr)?, usize::try_from(len)?))
 }
 
@@ -1303,9 +1309,13 @@ fn lower_pointer_pair_to_memory<T>(
     ptr: usize,
     len: usize,
 ) {
-    // FIXME(#4311): needs memory64 handling
-    *cx.get(offset + 0) = u32::try_from(ptr).unwrap().to_le_bytes();
-    *cx.get(offset + 4) = u32::try_from(len).unwrap().to_le_bytes();
+    if cx.memory64() {
+        *cx.get(offset + 0) = (ptr as u64).to_le_bytes();
+        *cx.get(offset + 8) = (len as u64).to_le_bytes();
+    } else {
+        *cx.get(offset + 0) = u32::try_from(ptr).unwrap().to_le_bytes();
+        *cx.get(offset + 4) = u32::try_from(len).unwrap().to_le_bytes();
+    }
 }
 
 // FIXME(#4311): these probably need different constants for memory64

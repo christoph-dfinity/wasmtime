@@ -46,6 +46,7 @@
 // for components in an embedding. This may need to be revisited though if the
 // requirements of embeddings change over time.
 
+use crate::IndexType;
 use crate::component::*;
 use crate::prelude::*;
 use crate::{EntityIndex, ModuleInternedTypeIndex, PrimaryMap, WasmValType};
@@ -502,7 +503,7 @@ pub enum Export {
 /// Data is stored in a linear memory.
 pub struct LinearMemoryOptions {
     /// The memory used by these options, if specified.
-    pub memory: Option<RuntimeMemoryIndex>,
+    pub memory: Option<(RuntimeMemoryIndex, IndexType)>,
     /// The realloc function used by these options, if specified.
     pub realloc: Option<RuntimeReallocIndex>,
 }
@@ -552,7 +553,17 @@ impl CanonicalOptions {
     pub fn memory(&self) -> Option<RuntimeMemoryIndex> {
         match self.data_model {
             CanonicalOptionsDataModel::Gc {} => None,
-            CanonicalOptionsDataModel::LinearMemory(opts) => opts.memory,
+            CanonicalOptionsDataModel::LinearMemory(opts) => opts.memory.map(|(m, _)| m),
+        }
+    }
+
+    /// Returns whether the linear memory backing these options is 64-bit.
+    pub fn memory64(&self) -> bool {
+        match self.data_model {
+            CanonicalOptionsDataModel::Gc {} => false,
+            CanonicalOptionsDataModel::LinearMemory(opts) => {
+                opts.memory.is_some_and(|(_, m)| m == IndexType::I64)
+            }
         }
     }
 }

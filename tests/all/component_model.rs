@@ -19,6 +19,7 @@ mod import;
 mod instance;
 mod linker;
 mod macros;
+mod memory64;
 mod missing_async;
 mod nested;
 mod post_return;

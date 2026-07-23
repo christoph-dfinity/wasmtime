@@ -94,7 +94,12 @@ struct ComponentInner {
     /// A cached handle to the `wasmtime::FuncType` for the canonical ABI's
     /// `realloc`, to avoid the need to look up types in the registry and take
     /// locks when calling `realloc` via `TypedFunc::call_raw`.
+    ///
+    /// The `memory64` variant has the `(i64, i64, i64, i64) -> i64` signature
+    /// used by components with 64-bit memories; the other has the 32-bit
+    /// `(i32, i32, i32, i32) -> i32` signature.
     realloc_func_type: Arc<FuncType>,
+    realloc_func_type_memory64: Arc<FuncType>,
 
     /// The checksum of the source binary from which the module was compiled.
     checksum: WasmChecksum,
@@ -463,6 +468,11 @@ impl Component {
             [ValType::I32, ValType::I32, ValType::I32, ValType::I32],
             [ValType::I32],
         ));
+        let realloc_func_type_memory64 = Arc::new(FuncType::new(
+            engine,
+            [ValType::I64, ValType::I64, ValType::I64, ValType::I64],
+            [ValType::I64],
+        ));
 
         Ok(Component {
             inner: Arc::new(ComponentInner {
@@ -474,6 +484,7 @@ impl Component {
                 info,
                 index,
                 realloc_func_type,
+                realloc_func_type_memory64,
                 checksum,
             }),
         })
@@ -898,8 +909,12 @@ impl Component {
         &self.inner.engine
     }
 
-    pub(crate) fn realloc_func_ty(&self) -> &Arc<FuncType> {
-        &self.inner.realloc_func_type
+    pub(crate) fn realloc_func_ty(&self, memory64: bool) -> &Arc<FuncType> {
+        if memory64 {
+            &self.inner.realloc_func_type_memory64
+        } else {
+            &self.inner.realloc_func_type
+        }
     }
 
     #[allow(

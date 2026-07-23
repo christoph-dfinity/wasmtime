@@ -3360,6 +3360,9 @@ impl Instance {
                         read_abi,
                         lower.as_slice_mut(),
                         &ValRaw::u32(read_address.try_into()?),
+                        // NB: memory64 is not yet wired through the async ABI;
+                        // preserve the existing 32-bit bounds check here.
+                        false,
                     )?;
                     let ty = match read_payload_ty {
                         Some(ty) => ty,
